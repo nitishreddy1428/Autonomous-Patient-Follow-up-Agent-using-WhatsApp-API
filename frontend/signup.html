@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | PatientAgent</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #1e293b, #0f172a);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .logo {
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-card glass">
+        <div class="logo">
+            <i class="fa-solid fa-heart-pulse"></i>
+            <span>PatientAgent</span>
+        </div>
+        <h2 style="margin-bottom: 0.5rem;">Create Account</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Join our network of healthcare
+            professionals.</p>
+
+        <form id="signupForm">
+            <div class="form-group" style="text-align: left;">
+                <label>Username</label>
+                <input type="text" id="username" placeholder="dr_nitish" required>
+            </div>
+            <div class="form-group" style="text-align: left;">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="nitish@hospital.com" required>
+            </div>
+            <div class="form-group" style="text-align: left;">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn" style="width: 100%; margin-top: 1rem; padding: 1rem;">Create Doctor
+                Profile</button>
+        </form>
+
+        <p style="margin-top: 2rem; font-size: 0.9rem; color: var(--text-muted);">
+            Already have an account? <a href="login.html"
+                style="color: var(--accent); text-decoration: none; font-weight: 600;">Login</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Signup successful! Please login.');
+                    window.location.href = 'login.html';
+                } else {
+                    alert(data.error || 'Signup failed');
+                }
+            } catch (err) {
+                console.error('Signup error:', err);
+                alert('Connection error. Is the backend running?');
+            }
+        });
+    </script>
+</body>
+
+</html>

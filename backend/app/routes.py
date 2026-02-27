@@ -1,10 +1,41 @@
+import time
 from flask import Blueprint, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
-from .models import Patient, CheckInResponse, Alert, db
+from .models import Patient, CheckInResponse, Alert, Doctor, db
 from .services import PatientService, TwilioService
 from .chatbot import get_conversation
 
 api = Blueprint('api', __name__)
+
+# ── Doctor Authentication ──────────────────────────────────────────
+
+@api.route('/auth/signup', methods=['POST'])
+def signup():
+    data = request.json
+    if Doctor.query.filter_by(username=data['username']).first():
+        return jsonify({'error': 'Username already exists'}), 400
+    if Doctor.query.filter_by(email=data['email']).first():
+        return jsonify({'error': 'Email already exists'}), 400
+    
+    new_doctor = Doctor(username=data['username'], email=data['email'])
+    new_doctor.set_password(data['password'])
+    db.session.add(new_doctor)
+    db.session.commit()
+    return jsonify({'message': 'Doctor registered successfully', 'username': new_doctor.username}), 201
+
+@api.route('/auth/login', methods=['POST'])
+def login():
+    data = request.json
+    doctor = Doctor.query.filter_by(username=data['username']).first()
+    if doctor and doctor.check_password(data['password']):
+        return jsonify({
+            'message': 'Login successful',
+            'doctor': {
+                'username': doctor.username,
+                'email': doctor.email
+            }
+        }), 200
+    return jsonify({'error': 'Invalid username or password'}), 401
 
 # ── Twilio WhatsApp Webhook ─────────────────────────────────────────
 
@@ -108,6 +139,53 @@ def check_in():
         data['symptoms']
     )
     return jsonify({'message': 'Response recorded'})
+
+@api.route('/telehealth/<int:patient_id>', methods=['POST'])
+def start_telehealth(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    
+    # Generate a unique Jitsi Meet link
+    room_id = f"PatientAgent_{patient_id}_{int(time.time())}"
+    video_link = f"https://meet.jit.si/{room_id}"
+    
+    message = (
+        f"🚨 *Urgent Video Consultation Requested*\n\n"
+        f"Hi {patient.name}, your doctor at PatientAgent would like to jump on a quick video call to check on your recovery.\n\n"
+        f"Please click the link below to join the secure video room:\n{video_link}"
+    )
+    
+    success, error = TwilioService.send_whatsapp(patient.phone, message)
+    
+    if success:
+        return jsonify({'success': True, 'link': video_link})
+    else:
+        return jsonify({'success': False, 'error': error}), 400
+
+
+@api.route('/patients/<int:patient_id>', methods=['PUT'])
+def update_patient(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    data = request.json
+    
+    patient.name = data.get('name', patient.name)
+    patient.phone = data.get('phone', patient.phone)
+    patient.surgery_type = data.get('surgery_type', patient.surgery_type)
+    patient.emergency_phone = data.get('emergency_phone', patient.emergency_phone)
+    
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Patient updated successfully'})
+
+@api.route('/patients/<int:patient_id>', methods=['DELETE'])
+def delete_patient(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    
+    # Clean up related records
+    CheckInResponse.query.filter_by(patient_id=patient_id).delete()
+    Alert.query.filter_by(patient_id=patient_id).delete()
+    
+    db.session.delete(patient)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Patient and related data deleted'})
 
 @api.route('/alerts', methods=['GET'])
 def get_alerts():

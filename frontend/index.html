@@ -11,37 +11,71 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body>
+<script>
+    // Auth Guard
+    const doctorData = localStorage.getItem('doctor');
+    if (!doctorData) {
+        window.location.href = 'login.html';
+    }
+    const doctor = JSON.parse(doctorData);
+</script>
+</head>
+
+<body data-theme="dark">
     <div class="container">
-        <header>
+        <header class="glass" style="padding: 1rem 2rem; margin-bottom: 2rem;">
             <div class="logo">
                 <i class="fa-solid fa-heart-pulse"></i>
-                <span>PatientAgent</span>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="line-height: 1;">PatientAgent</span>
+                    <small
+                        style="font-size: 0.65rem; color: var(--text-muted); font-weight: 400; letter-spacing: 1px;">AUTONOMOUS
+                        AI MONITORING</small>
+                </div>
             </div>
-            <nav style="display: flex; align-items: center; gap: 1.5rem;">
-                <a href="index.html"
-                    style="color: var(--accent); text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2);">
-                    <i class="fa-solid fa-chart-line"></i> Dashboard
-                </a>
-                <a href="database.html"
-                    style="color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: all 0.2s;"
-                    onmouseover="this.style.color='#f8fafc'; this.style.background='rgba(255,255,255,0.05)'"
-                    onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">
-                    <i class="fa-solid fa-database"></i> Database
-                </a>
-            </nav>
-            <div class="header-actions">
-                <button class="btn" onclick="openModal('patientModal')">
-                    <i class="fa-solid fa-plus"></i> Add Patient
-                </button>
-                <button class="btn" style="background: #25D366;" onclick="sendAllCheckins()">
-                    <i class="fa-brands fa-whatsapp"></i> Send All Check-ins
-                </button>
-                <button class="btn btn-ghost" onclick="simulateCheckIn()">
-                    Run Check-in Demo
-                </button>
+
+            <div style="display: flex; align-items: center; gap: 2rem;">
+                <div
+                    style="display: flex; align-items: center; font-size: 0.85rem; color: var(--accent); background: rgba(34, 211, 238, 0.1); padding: 0.4rem 1rem; border-radius: 2rem; border: 1px solid rgba(34, 211, 238, 0.2);">
+                    <span class="pulse-node"></span> Live AI Monitoring Active
+                </div>
+
+                <div class="theme-toggle" id="themeToggle" title="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600; font-size: 0.9rem;" id="doctor-name">Dr. Loading...</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);" id="doctor-email">...</div>
+                    </div>
+                    <button class="btn btn-ghost"
+                        style="padding: 0.5rem; border-radius: 0.5rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);"
+                        onclick="logout()">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
             </div>
         </header>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <nav style="display: flex; gap: 1rem;">
+                <button class="btn"
+                    style="background: rgba(34, 211, 238, 0.1); color: var(--accent); border: 1px solid rgba(34, 211, 238, 0.2);"><i
+                        class="fa-solid fa-chart-line"></i> Dashboard</button>
+                <button class="btn btn-ghost" onclick="window.location.href='database.html'"><i
+                        class="fa-solid fa-database"></i> Archives</button>
+            </nav>
+
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn" onclick="openAddModal()">
+                    <i class="fa-solid fa-plus"></i> Register Patient
+                </button>
+                <button class="btn" style="background: #25D366;" onclick="sendAllCheckins()">
+                    <i class="fa-brands fa-whatsapp"></i> Batch Check-in
+                </button>
+            </div>
+        </div>
 
         <!-- Stats Section -->
         <section class="stats-grid">
@@ -111,8 +145,9 @@
     <!-- Modals -->
     <div id="patientModal" class="modal">
         <div class="modal-content glass">
-            <h2>Register New Patient</h2>
+            <h2 id="modalTitle">Register New Patient</h2>
             <form id="patientForm" style="margin-top: 1.5rem;">
+                <input type="hidden" id="edit-patient-id">
                 <div class="form-group">
                     <label>Full Name</label>
                     <input type="text" id="p-name" placeholder="John Doe" required>

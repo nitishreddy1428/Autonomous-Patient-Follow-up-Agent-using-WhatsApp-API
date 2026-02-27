@@ -2,6 +2,31 @@ const API_URL = 'http://localhost:5000/api';
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // Populate Auth Info
+    const doctorData = localStorage.getItem('doctor');
+    if (doctorData) {
+        const doctor = JSON.parse(doctorData);
+        document.getElementById('doctor-name').textContent = `Dr. ${doctor.username}`;
+        document.getElementById('doctor-email').textContent = doctor.email;
+    }
+
+    // Theme Toggle Logic
+    const themeToggle = document.getElementById('themeToggle');
+    const body = document.body;
+
+    // Check saved theme
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    body.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = body.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    });
+
     fetchStats();
     fetchPatients();
     fetchAlerts();
@@ -18,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (patientForm) {
         patientForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const patientId = document.getElementById('edit-patient-id').value;
             const data = {
                 name: document.getElementById('p-name').value,
                 phone: document.getElementById('p-phone').value,
@@ -26,8 +52,11 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                const res = await fetch(`${API_URL}/patients`, {
-                    method: 'POST',
+                const method = patientId ? 'PUT' : 'POST';
+                const url = patientId ? `${API_URL}/patients/${patientId}` : `${API_URL}/patients`;
+
+                const res = await fetch(url, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
@@ -37,13 +66,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     fetchPatients();
                     fetchStats();
                     patientForm.reset();
+                    document.getElementById('edit-patient-id').value = '';
+                    showToast(patientId ? '✅ Patient updated successfully' : '✅ Patient added successfully');
                 }
             } catch (err) {
-                console.error('Error adding patient:', err);
+                console.error('Error saving patient:', err);
+                showToast('❌ Error saving patient profile', 'error');
             }
         });
     }
 });
+
+function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Register New Patient';
+    document.getElementById('patientForm').reset();
+    document.getElementById('edit-patient-id').value = '';
+    openModal('patientModal');
+}
+
+async function openEditModal(id) {
+    try {
+        const res = await fetch(`${API_URL}/patients`);
+        const patients = await res.json();
+        const p = patients.find(x => x.id === id);
+
+        if (p) {
+            document.getElementById('modalTitle').textContent = 'Edit Patient Profile';
+            document.getElementById('edit-patient-id').value = p.id;
+            document.getElementById('p-name').value = p.name;
+            document.getElementById('p-phone').value = p.phone;
+            document.getElementById('p-surgery').value = p.surgery_type;
+            const emergencyInput = document.getElementById('p-emergency');
+            if (emergencyInput) emergencyInput.value = p.emergency_phone || '';
+
+            openModal('patientModal');
+        }
+    } catch (err) {
+        console.error('Failed to load patient for edit:', err);
+    }
+}
+
+async function deletePatient(id, name) {
+    if (!confirm(`⚠️ Are you sure you want to PERMANENTLY delete ${name} and all their history? This cannot be undone.`)) return;
+
+    try {
+        const res = await fetch(`${API_URL}/patients/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast(`🗑️ ${name} deleted from records`);
+            fetchPatients();
+            fetchStats();
+            fetchAlerts();
+        }
+    } catch (err) {
+        console.error('Delete failed:', err);
+        showToast('❌ Error deleting patient', 'error');
+    }
+}
 
 async function fetchStats() {
     try {
@@ -79,8 +157,23 @@ async function fetchPatients() {
                 </td>
                 <td><span class="status-badge status-${p.status.toLowerCase()}">${p.status}</span></td>
                 <td>
-                    <button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #25D366;" onclick="sendCheckin(${p.id}, '${p.name}')"><i class='fa-brands fa-whatsapp'></i> Check-in</button>
-                    <button class="btn btn-ghost" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; margin-left: 0.3rem;" onclick="viewChart(${p.id}, '${p.name}')">View Chart</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #25D366;" onclick="sendCheckin(${p.id}, '${p.name}')" title="Send WhatsApp">
+                            <i class='fa-brands fa-whatsapp'></i> Check-in
+                        </button>
+                        <button class="btn btn-ghost" style="padding: 0.4rem; font-size: 0.75rem; min-width: 32px; color: var(--accent); border-color: rgba(34, 211, 238, 0.2);" onclick="viewChart(${p.id}, '${p.name}')" title="View Chart">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </button>
+                        <button class="btn btn-ghost" style="padding: 0.4rem; font-size: 0.75rem; min-width: 32px; color: var(--primary); border-color: rgba(37, 99, 235, 0.2);" onclick="startTelehealth(${p.id}, '${p.name}')" title="Video Consult">
+                            <i class="fa-solid fa-video"></i>
+                        </button>
+                        <button class="btn btn-ghost" style="padding: 0.4rem; font-size: 0.75rem; min-width: 32px;" onclick="openEditModal(${p.id})" title="Edit Patient">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn btn-ghost" style="padding: 0.4rem; font-size: 0.75rem; min-width: 32px; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);" onclick="deletePatient(${p.id}, '${p.name}')" title="Delete Patient">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `).join('');
@@ -108,14 +201,35 @@ async function fetchAlerts() {
                     <div style="font-size: 0.7rem; color: var(--text-muted);">${formatTime(a.timestamp)}</div>
                 </div>
                 <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.9;">${a.message}</div>
-                <div style="margin-top: 0.8rem;">
-                    <button class="btn" style="background: var(--bg-dark); font-size: 0.7rem; padding: 0.3rem 0.6rem;" onclick="window.open('tel:${a.phone || '+1234567'}')">Contact Patient</button>
+                <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem;">
+                    <button class="btn" style="background: var(--bg-dark); font-size: 0.7rem; padding: 0.3rem 0.6rem;" onclick="window.open('tel:${a.phone || '+1234567'}')">Call</button>
+                    <button class="btn" style="background: var(--primary); font-size: 0.7rem; padding: 0.3rem 0.6rem;" onclick="startTelehealth(${a.patient_id}, '${a.patient_name}')">Video Consult</button>
                     <button class="btn btn-ghost" style="font-size: 0.7rem; padding: 0.3rem 0.6rem;" onclick="resolveAlert(${a.id})">Resolve</button>
                 </div>
             </div>
         `).join('');
     } catch (err) {
         console.error('Error fetching alerts:', err);
+    }
+}
+
+async function startTelehealth(patientId, name) {
+    if (!confirm(`🚀 Start instantaneous video consultation with ${name}?\n\nA secure Jitsi link will be sent to their WhatsApp.`)) return;
+
+    try {
+        showToast(`📲 Generating link for ${name}...`);
+        const res = await fetch(`${API_URL}/telehealth/${patientId}`, { method: 'POST' });
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(`✅ Link sent! Opening your consultation room...`);
+            window.open(data.link, '_blank');
+        } else {
+            showToast(`❌ Error: ${data.error}`, 'error');
+        }
+    } catch (err) {
+        console.error('Telehealth failed:', err);
+        showToast('❌ Connection error to telehealth service', 'error');
     }
 }
 
@@ -295,6 +409,20 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 4000);
 }
 
+function updateThemeIcon(theme) {
+    const icon = document.querySelector('#themeToggle i');
+    if (theme === 'dark') {
+        icon.className = 'fa-solid fa-moon';
+    } else {
+        icon.className = 'fa-solid fa-sun';
+    }
+}
+
+function logout() {
+    localStorage.removeItem('doctor');
+    window.location.href = 'login.html';
+}
+
 // Global Exports
 window.viewChart = viewChart;
 window.resolveAlert = resolveAlert;
@@ -303,3 +431,9 @@ window.closeModal = closeModal;
 window.simulateCheckIn = simulateCheckIn;
 window.sendCheckin = sendCheckin;
 window.sendAllCheckins = sendAllCheckins;
+window.logout = logout;
+window.updateThemeIcon = updateThemeIcon;
+window.openEditModal = openEditModal;
+window.openAddModal = openAddModal;
+window.deletePatient = deletePatient;
+window.startTelehealth = startTelehealth;

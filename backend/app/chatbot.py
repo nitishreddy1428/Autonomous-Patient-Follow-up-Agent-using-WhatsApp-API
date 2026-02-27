@@ -132,6 +132,16 @@ def _handle_pain(conv, message_body):
     """Extract pain level from patient message."""
     pain = _extract_number(message_body, min_val=1, max_val=10)
     if pain is None:
+        # Try Conversational AI if extraction fails
+        ai_reply = get_conversational_reply(
+            conv.get('patient_name'), 
+            conv.get('surgery_type'), 
+            message_body,
+            "What is your pain level from 1 to 10?"
+        )
+        if ai_reply:
+            return (ai_reply, False, None)
+
         return (
             "🤔 I didn't catch that. Please tell me your *pain level from 1 to 10*.\n"
             "(1 = no pain, 10 = worst pain imaginable)",
@@ -150,6 +160,16 @@ def _handle_temp(conv, message_body):
     else:
         temp = _extract_temperature(message_body)
         if temp is None:
+            # Try Conversational AI if extraction fails
+            ai_reply = get_conversational_reply(
+                conv.get('patient_name'), 
+                conv.get('surgery_type'), 
+                message_body,
+                "What is your current body temperature?"
+            )
+            if ai_reply:
+                return (ai_reply, False, None)
+
             return (
                 "🤔 I didn't catch that. Please type your temperature like *98.6* or *37.2*.\n"
                 "Or type 'skip' if you don't have a thermometer.",
@@ -160,6 +180,46 @@ def _handle_temp(conv, message_body):
     conv['stage'] = 'SYMPTOMS'
     reply = CHECKIN_FLOW['TEMP']['message']
     return (reply, False, None)
+
+
+def get_conversational_reply(patient_name, surgery_type, user_msg, current_question):
+    """Use AI to answer patient questions and guide them back to the check-in."""
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key or len(user_msg) < 5: # Don't invoke for single words
+        return None
+
+    try:
+        response = requests.post(
+            'https://api.openai.com/v1/chat/completions',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'model': 'gpt-3.5-turbo',
+                'messages': [
+                    {
+                        'role': 'system',
+                        'content': (
+                            f"You are a helpful medical assistant for PatientAgent. "
+                            f"The patient, {patient_name}, is recovering from {surgery_type} surgery. "
+                            "They are currently in the middle of a daily check-in. "
+                            "If they ask a question or express concern, give a brief, reassuring, and helpful response (NOT medical advice, just general recovery tips). "
+                            f"After answering, gently remind them that you need to complete the check-in and re-ask the question: '{current_question}'."
+                        )
+                    },
+                    {'role': 'user', 'content': user_msg}
+                ],
+                'temperature': 0.7,
+                'max_tokens': 150
+            },
+            timeout=8
+        )
+        data = response.json()
+        return data['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"LLM conversational reply failed: {e}")
+        return None
 
 
 def _handle_symptoms(conv, phone, message_body):
