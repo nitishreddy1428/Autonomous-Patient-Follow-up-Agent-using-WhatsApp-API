@@ -162,6 +162,48 @@ def start_telehealth(patient_id):
         return jsonify({'success': False, 'error': error}), 400
 
 
+@api.route('/patients/<int:patient_id>/summary', methods=['GET'])
+def get_patient_summary(patient_id):
+    patient = Patient.query.get_or_404(patient_id)
+    # Get last 10 responses for context
+    responses = CheckInResponse.query.filter_by(patient_id=patient_id).order_by(CheckInResponse.timestamp.desc()).limit(10).all()
+    
+    if not responses:
+        return jsonify({'summary': 'No recovery data available yet for analysis.'})
+
+    history_text = "\n".join([
+        f"- {r.timestamp.date()}: Pain {r.pain_level}/10, Temp {r.temperature or 'N/A'}, Symptoms: {r.symptoms}"
+        for r in responses
+    ])
+
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        return jsonify({'summary': 'AI Summary unavailable (API Key not set). Record: ' + history_text[:100] + '...'})
+
+    try:
+        openai_res = requests.post(
+            'https://api.openai.com/v1/chat/completions',
+            headers={'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'},
+            json={
+                'model': 'gpt-3.5-turbo',
+                'messages': [{
+                    'role': 'system',
+                    'content': 'You are a senior medical consultant. Summarize this patient\'s post-surgery recovery trend in 2-3 concise sentences. Highlight if they are improving or need attention.'
+                }, {
+                    'role': 'user',
+                    'content': f"Patient: {patient.name}, Surgery: {patient.surgery_type}\n\nRecent History:\n{history_text}"
+                }],
+                'temperature': 0.5,
+                'max_tokens': 150
+            },
+            timeout=10
+        )
+        summary = openai_res.json()['choices'][0]['message']['content']
+        return jsonify({'summary': summary})
+    except Exception as e:
+        return jsonify({'summary': f'Error generating AI summary: {str(e)}'}), 500
+
+
 @api.route('/patients/<int:patient_id>', methods=['PUT'])
 def update_patient(patient_id):
     patient = Patient.query.get_or_404(patient_id)

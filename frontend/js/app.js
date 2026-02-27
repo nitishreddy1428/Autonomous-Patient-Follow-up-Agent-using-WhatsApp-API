@@ -161,6 +161,9 @@ async function fetchPatients() {
                         <button class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #25D366;" onclick="sendCheckin(${p.id}, '${p.name}')" title="Send WhatsApp">
                             <i class='fa-brands fa-whatsapp'></i> Check-in
                         </button>
+                        <button class="btn btn-ghost" style="padding: 0.4rem; font-size: 0.75rem; min-width: 32px; color: #a855f7; border-color: rgba(168, 85, 247, 0.2);" onclick="showSummary(${p.id}, '${p.name}')" title="AI Summary">
+                            <i class="fa-solid fa-brain"></i>
+                        </button>
                         <button class="btn btn-ghost" style="padding: 0.4rem; font-size: 0.75rem; min-width: 32px; color: var(--accent); border-color: rgba(34, 211, 238, 0.2);" onclick="viewChart(${p.id}, '${p.name}')" title="View Chart">
                             <i class="fa-solid fa-chart-line"></i>
                         </button>
@@ -433,7 +436,29 @@ window.sendCheckin = sendCheckin;
 window.sendAllCheckins = sendAllCheckins;
 window.logout = logout;
 window.updateThemeIcon = updateThemeIcon;
+async function showSummary(patientId, name) {
+    document.getElementById('summary-name').textContent = name;
+    document.getElementById('summary-text').innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="skeleton-text" style="width:100%; height:18px; background:rgba(255,255,255,0.05); border-radius:4px; animation: pulse 1.5s infinite;"></div>
+            <div class="skeleton-text" style="width:90%; height:18px; background:rgba(255,255,255,0.05); border-radius:4px; animation: pulse 1.5s infinite;"></div>
+            <div class="skeleton-text" style="width:70%; height:18px; background:rgba(255,255,255,0.05); border-radius:4px; animation: pulse 1.5s infinite;"></div>
+        </div>
+    `;
+    openModal('summaryModal');
+
+    try {
+        const res = await fetch(`${API_URL}/patients/${patientId}/summary`);
+        const data = await res.json();
+        document.getElementById('summary-text').innerHTML = `<p style="white-space: pre-wrap;">${data.summary}</p>`;
+    } catch (err) {
+        console.error('Summary failed:', err);
+        document.getElementById('summary-text').innerHTML = '<span style="color:var(--danger)">Failed to load AI summary. Please try again.</span>';
+    }
+}
+
 window.openEditModal = openEditModal;
 window.openAddModal = openAddModal;
 window.deletePatient = deletePatient;
 window.startTelehealth = startTelehealth;
+window.showSummary = showSummary;

@@ -183,9 +183,9 @@ def _handle_temp(conv, message_body):
 
 
 def get_conversational_reply(patient_name, surgery_type, user_msg, current_question):
-    """Use AI to answer patient questions and guide them back to the check-in."""
+    """Use AI to answer patient questions and guide them back to the check-in with Multi-lingual support."""
     api_key = os.environ.get('OPENAI_API_KEY')
-    if not api_key or len(user_msg) < 5: # Don't invoke for single words
+    if not api_key or len(user_msg) < 5: 
         return None
 
     try:
@@ -203,17 +203,20 @@ def get_conversational_reply(patient_name, surgery_type, user_msg, current_quest
                         'content': (
                             f"You are a helpful medical assistant for PatientAgent. "
                             f"The patient, {patient_name}, is recovering from {surgery_type} surgery. "
-                            "They are currently in the middle of a daily check-in. "
-                            "If they ask a question or express concern, give a brief, reassuring, and helpful response (NOT medical advice, just general recovery tips). "
-                            f"After answering, gently remind them that you need to complete the check-in and re-ask the question: '{current_question}'."
+                            "They are currently in a daily check-in. "
+                            "INSTRUCTIONS: "
+                            "1. Detect the language of the patient's message. "
+                            "2. Reply professionally and reassuringly IN THE SAME LANGUAGE they used. "
+                            "3. Do NOT provide medical prescriptions, just general care advice. "
+                            f"4. Always end by re-asking the check-in question: '{current_question}' in their language."
                         )
                     },
                     {'role': 'user', 'content': user_msg}
                 ],
                 'temperature': 0.7,
-                'max_tokens': 150
+                'max_tokens': 200
             },
-            timeout=8
+            timeout=10
         )
         data = response.json()
         return data['choices'][0]['message']['content']

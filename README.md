@@ -15,10 +15,11 @@
 ---
 
 ## 🌟 Key Features
-- **🤖 Autonomous AI Chatbot:** Conducts structured medical check-ins (Pain, Temperature, Symptoms) natively on WhatsApp.
-- **🚨 10-Minute Fail-Safe Watcher:** Background thread monitors active check-ins. If a patient is high-risk and stops replying for 10 minutes, an emergency alert is sent to a secondary contact.
-- **📊 Doctor's Command Center:** A premium, real-time dashboard featuring live patient monitoring, risk-score visualizations, and instant alerts.
-- **🧠 Risk Score Engine:** Rule-based medical NLP (upgradable to LLM) that calculates patient risk from 0-100% and categorizes them as *Recovering*, *Alert*, or *Critical*.
+- **🤖 Conversational AI & Multi-lingual Support:** Uses GPT-3.5 to answer patient recovery questions and automatically communicates in their native language (Hindi, Telugu, Spanish, etc.).
+- **🚨 10-Minute Fail-Safe Watcher:** Background thread monitors high-risk patients. If they stop replying during a check-in, an emergency alert is sent to a secondary contact.
+- **🧠 AI Clinical Insights:** Generates professional medical summaries of recovery trends using GPT analysis.
+- **🎥 One-Click Telehealth:** Instant secure Jitsi video consultation links sent directly via WhatsApp for critical cases.
+- **📊 Doctor's Command Center:** A premium Glassmorphism dashboard with real-time monitoring and live AI "Pulse" indicators.
 
 ---
 
