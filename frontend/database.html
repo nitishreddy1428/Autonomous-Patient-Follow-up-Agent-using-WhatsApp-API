@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PatientAgent | Database Explorer</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ── Database Page Specific Styles ── */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .nav-bar a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .nav-bar a:hover {
+            color: var(--text-white);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-bar a.active {
+            color: var(--accent);
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+        }
+
+        .db-stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .db-stat {
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .db-stat .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .db-stat .number {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .tab-container {
+            margin-bottom: 2rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--glass-border);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-white);
+            border-color: var(--primary-light);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .tab-btn .count {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+        }
+
+        .tab-btn.active .count {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .table-card {
+            overflow-x: auto;
+        }
+
+        .db-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .db-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .db-table th {
+            text-align: left;
+            padding: 1rem 1.25rem;
+            color: var(--accent);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 2px solid var(--primary);
+            white-space: nowrap;
+        }
+
+        .db-table td {
+            padding: 0.85rem 1.25rem;
+            border-bottom: 1px solid var(--glass-border);
+            color: var(--text-white);
+            vertical-align: top;
+        }
+
+        .db-table tbody tr {
+            transition: background 0.15s;
+        }
+
+        .db-table tbody tr:hover {
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .db-table .cell-id {
+            color: var(--primary-light);
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .db-table .cell-timestamp {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+
+        .db-table .cell-symptom {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pill {
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .pill-green {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .pill-yellow {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+
+        .pill-red {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .pill-blue {
+            background: rgba(37, 99, 235, 0.15);
+            color: #60a5fa;
+        }
+
+        .pill-gray {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .refresh-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .refresh-bar .last-refresh {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .schema-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.75rem;
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            border-radius: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .table-card {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>PatientAgent</span>
+            </div>
+            <nav class="nav-bar" style="margin-bottom: 0;">
+                <a href="index.html"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                <a href="database.html" class="active"><i class="fa-solid fa-database"></i> Database</a>
+            </nav>
+        </header>
+
+        <!-- DB Stats Row -->
+        <section class="db-stats-row">
+            <div class="db-stat glass">
+                <div class="label">Patients Table</div>
+                <div class="number" id="count-patients" style="color: var(--primary-light);">0</div>
+                <div class="schema-badge" style="margin-top: 0.5rem;">
+                    <i class="fa-solid fa-table"></i> 7 columns
+                </div>
+            </div>
+            <div class="db-stat glass">
+                <div class="label">Responses Table</div>
+                <div class="number" id="count-responses" style="color: var(--accent);">0</div>
+                <div class="schema-badge" style="margin-top: 0.5rem;">
+                    <i class="fa-solid fa-table"></i> 8 columns
+                </div>
+            </div>
+            <div class="db-stat glass">
+                <div class="label">Alerts Table</div>
+                <div class="number" id="count-alerts" style="color: var(--warning);">0</div>
+                <div class="schema-badge" style="margin-top: 0.5rem;">
+                    <i class="fa-solid fa-table"></i> 7 columns
+                </div>
+            </div>
+            <div class="db-stat glass">
+                <div class="label">Database Engine</div>
+                <div class="number" style="font-size: 1.2rem; color: var(--success); margin-top: 0.5rem;">SQLite 3</div>
+                <div class="schema-badge" style="margin-top: 0.5rem;">
+                    <i class="fa-solid fa-hard-drive"></i> patients.db
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabs -->
+        <div class="tab-container">
+            <div class="refresh-bar">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('patients')" id="tab-patients">
+                        <i class="fa-solid fa-user-injured"></i> Patients
+                        <span class="count" id="tab-count-patients">0</span>
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('responses')" id="tab-responses">
+                        <i class="fa-solid fa-clipboard-check"></i> Check-in Responses
+                        <span class="count" id="tab-count-responses">0</span>
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('alerts')" id="tab-alerts">
+                        <i class="fa-solid fa-bell"></i> Alerts
+                        <span class="count" id="tab-count-alerts">0</span>
+                    </button>
+                </div>
+                <div>
+                    <button class="btn" onclick="refreshAll()" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <i class="fa-solid fa-arrows-rotate"></i> Refresh
+                    </button>
+                    <span class="last-refresh" id="last-refresh" style="margin-left: 0.75rem;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Display -->
+        <div class="glass table-card" style="padding: 0; overflow: hidden;">
+            <div id="table-content">
+                <!-- Dynamically loaded -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let currentTab = 'patients';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAll();
+            setInterval(refreshAll, 15000);
+        });
+
+        async function refreshAll() {
+            await Promise.all([loadPatients(), loadResponses(), loadAlerts(), loadCounts()]);
+            document.getElementById('last-refresh').textContent =
+                `Last refreshed: ${new Date().toLocaleTimeString()}`;
+            renderTable();
+        }
+
+        let data = { patients: [], responses: [], alerts: [] };
+
+        async function loadCounts() {
+            try {
+                const res = await fetch(`${API_URL}/stats`);
+                const s = await res.json();
+                document.getElementById('count-patients').textContent = s.total_patients;
+                document.getElementById('count-responses').textContent = s.total_responses;
+                document.getElementById('count-alerts').textContent = s.total_alerts;
+                document.getElementById('tab-count-patients').textContent = s.total_patients;
+                document.getElementById('tab-count-responses').textContent = s.total_responses;
+                document.getElementById('tab-count-alerts').textContent = s.total_alerts;
+            } catch (err) {
+                console.error('Stats error:', err);
+            }
+        }
+
+        async function loadPatients() {
+            try {
+                const res = await fetch(`${API_URL}/db/patients`);
+                data.patients = await res.json();
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadResponses() {
+            try {
+                const res = await fetch(`${API_URL}/db/responses`);
+                data.responses = await res.json();
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadAlerts() {
+            try {
+                const res = await fetch(`${API_URL}/db/alerts`);
+                data.alerts = await res.json();
+            } catch (err) { console.error(err); }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            renderTable();
+        }
+
+        function statusPill(status) {
+            const map = {
+                'Recovering': 'pill-green',
+                'Alert': 'pill-yellow',
+                'Critical': 'pill-red'
+            };
+            return `<span class="pill ${map[status] || 'pill-gray'}">${status}</span>`;
+        }
+
+        function severityPill(severity) {
+            const map = {
+                'Low': 'pill-green',
+                'Medium': 'pill-yellow',
+                'High': 'pill-red',
+                'Critical': 'pill-red'
+            };
+            return `<span class="pill ${map[severity] || 'pill-gray'}">${severity}</span>`;
+        }
+
+        function resolvedPill(val) {
+            return val
+                ? '<span class="pill pill-green"><i class="fa-solid fa-check"></i> Yes</span>'
+                : '<span class="pill pill-red"><i class="fa-solid fa-xmark"></i> No</span>';
+        }
+
+        function formatDT(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) +
+                ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function renderTable() {
+            const container = document.getElementById('table-content');
+
+            if (currentTab === 'patients') {
+                if (data.patients.length === 0) {
+                    container.innerHTML = emptyState('No patients registered yet.');
+                    return;
+                }
+                container.innerHTML = `
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Surgery Type</th>
+                                <th>Surgery Date</th>
+                                <th>Status</th>
+                                <th>Risk Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.patients.map(p => `
+                                <tr>
+                                    <td class="cell-id">${p.id}</td>
+                                    <td style="font-weight: 600;">${p.name}</td>
+                                    <td><span class="pill pill-blue"><i class="fa-solid fa-phone"></i> ${p.phone}</span></td>
+                                    <td>${p.surgery_type || '—'}</td>
+                                    <td class="cell-timestamp">${formatDT(p.surgery_date)}</td>
+                                    <td>${statusPill(p.status)}</td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                                            <div style="width:60px;height:5px;background:rgba(0,0,0,0.2);border-radius:3px;">
+                                                <div style="width:${p.risk_score}%;height:100%;background:${p.risk_score > 70 ? '#ef4444' : p.risk_score > 40 ? '#f59e0b' : '#10b981'};border-radius:3px;"></div>
+                                            </div>
+                                            <span style="font-size:0.75rem; font-weight:600;">${p.risk_score}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+
+            } else if (currentTab === 'responses') {
+                if (data.responses.length === 0) {
+                    container.innerHTML = emptyState('No check-in responses recorded yet.');
+                    return;
+                }
+                container.innerHTML = `
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient</th>
+                                <th>Timestamp</th>
+                                <th>Pain Level</th>
+                                <th>Temperature</th>
+                                <th>Symptoms</th>
+                                <th>Sentiment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.responses.map(r => `
+                                <tr>
+                                    <td class="cell-id">${r.id}</td>
+                                    <td>
+                                        <span style="font-weight:600;">${r.patient_name}</span>
+                                        <span style="font-size:0.7rem; color:var(--text-muted);"> (ID:${r.patient_id})</span>
+                                    </td>
+                                    <td class="cell-timestamp">${formatDT(r.timestamp)}</td>
+                                    <td>
+                                        <span class="pill ${r.pain_level > 7 ? 'pill-red' : r.pain_level > 4 ? 'pill-yellow' : 'pill-green'}">
+                                            ${r.pain_level}/10
+                                        </span>
+                                    </td>
+                                    <td>${r.temperature ? r.temperature.toFixed(1) + '°C' : '—'}</td>
+                                    <td class="cell-symptom">${r.symptoms || '—'}</td>
+                                    <td>${r.sentiment ? severityPill(r.sentiment) : '<span class="pill pill-gray">—</span>'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+
+            } else if (currentTab === 'alerts') {
+                if (data.alerts.length === 0) {
+                    container.innerHTML = emptyState('No alerts triggered yet.');
+                    return;
+                }
+                container.innerHTML = `
+                    <table class="db-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient</th>
+                                <th>Timestamp</th>
+                                <th>Severity</th>
+                                <th>Message</th>
+                                <th>Resolved</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.alerts.map(a => `
+                                <tr>
+                                    <td class="cell-id">${a.id}</td>
+                                    <td>
+                                        <span style="font-weight:600;">${a.patient_name}</span>
+                                        <span style="font-size:0.7rem; color:var(--text-muted);"> (ID:${a.patient_id})</span>
+                                    </td>
+                                    <td class="cell-timestamp">${formatDT(a.timestamp)}</td>
+                                    <td>${severityPill(a.severity)}</td>
+                                    <td class="cell-symptom">${a.message}</td>
+                                    <td>${resolvedPill(a.is_resolved)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+            }
+        }
+
+        function emptyState(msg) {
+            return `
+                <div class="empty-state">
+                    <i class="fa-solid fa-database"></i>
+                    <div>${msg}</div>
+                    <div style="margin-top:0.5rem;font-size:0.8rem;">Run some check-ins from the Dashboard to populate data.</div>
+                </div>`;
+        }
+    </script>
+</body>
+
+</html>

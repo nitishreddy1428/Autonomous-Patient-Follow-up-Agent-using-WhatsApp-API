@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PatientAgent | Autonomous Recovery Follow-up</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>PatientAgent</span>
+            </div>
+            <nav style="display: flex; align-items: center; gap: 1.5rem;">
+                <a href="index.html"
+                    style="color: var(--accent); text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.2);">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </a>
+                <a href="database.html"
+                    style="color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem; transition: all 0.2s;"
+                    onmouseover="this.style.color='#f8fafc'; this.style.background='rgba(255,255,255,0.05)'"
+                    onmouseout="this.style.color='#94a3b8'; this.style.background='transparent'">
+                    <i class="fa-solid fa-database"></i> Database
+                </a>
+            </nav>
+            <div class="header-actions">
+                <button class="btn" onclick="openModal('patientModal')">
+                    <i class="fa-solid fa-plus"></i> Add Patient
+                </button>
+                <button class="btn" style="background: #25D366;" onclick="sendAllCheckins()">
+                    <i class="fa-brands fa-whatsapp"></i> Send All Check-ins
+                </button>
+                <button class="btn btn-ghost" onclick="simulateCheckIn()">
+                    Run Check-in Demo
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Section -->
+        <section class="stats-grid">
+            <div class="stat-card glass">
+                <h3>Total Patients</h3>
+                <div class="value" id="stat-total-patients">0</div>
+                <div style="color: var(--success); font-size: 0.8rem; margin-top: 5px;">
+                    <i class="fa-solid fa-arrow-up"></i> Active monitoring
+                </div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Active Alerts</h3>
+                <div class="value" id="stat-active-alerts" style="color: var(--warning);">0</div>
+                <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 5px;">
+                    Needs attention
+                </div>
+            </div>
+            <div class="stat-card glass">
+                <h3>Critical Cases</h3>
+                <div class="value" id="stat-critical-cases" style="color: var(--danger);">0</div>
+                <div style="color: var(--danger); font-size: 0.8rem; margin-top: 5px;">
+                    Immediate action required
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content -->
+        <main class="main-grid">
+            <div class="glass">
+                <div class="card-header">
+                    <h2>Patient Monitoring</h2>
+                    <div class="filters">
+                        <select style="width: auto; padding: 0.4rem;">
+                            <option>All Status</option>
+                            <option>Recovering</option>
+                            <option>Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <table class="patient-table">
+                    <thead>
+                        <tr>
+                            <th>Patient Name</th>
+                            <th>Surgery</th>
+                            <th>Risk Score</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patient-list">
+                        <!-- Loaded via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="glass">
+                <div class="card-header">
+                    <h2>Live Alerts</h2>
+                </div>
+                <div class="alerts-list" id="alerts-list">
+                    <!-- Loaded via JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="patientModal" class="modal">
+        <div class="modal-content glass">
+            <h2>Register New Patient</h2>
+            <form id="patientForm" style="margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="p-name" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp / Phone</label>
+                    <input type="text" id="p-phone" placeholder="+1..." required>
+                </div>
+                <div class="form-group">
+                    <label>Surgery Type</label>
+                    <input type="text" id="p-surgery" placeholder="Hip Replacement">
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Emergency Check-in Contact (WhatsApp)</label>
+                    <input type="text" id="p-emergency" placeholder="+1...">
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn" style="flex: 1;">Save Patient</button>
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('patientModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content glass" style="max-width: 800px; width: 95%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 id="chart-patient-name">Recovery Trends</h2>
+                <button class="btn btn-ghost" onclick="closeModal('chartModal')">Close</button>
+            </div>
+            <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 1rem;">
+                <canvas id="recoveryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js?v=2"></script>
+</body>
+
+</html>
